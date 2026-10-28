@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TopicChat AI — Single Agent</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root { color-scheme: dark; font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif; }
+    body { background: #0d1424; color: #e8eef9; margin: 0; min-height: 100vh; }
+    .shell { max-width: 920px; margin: 36px auto; padding: 0 18px; }
+    .header { display: flex; gap: 16px; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .mark { display: grid; place-items: center; background: #5a5bea; width: 48px; height: 48px; border-radius: 14px; font-size: 24px; }
+    h1 { margin: 0; font-size: 23px; letter-spacing: -.4px; }
+    .sub { margin: 5px 0 0; color: #99a9c4; font-size: 13px; }
+    .controls { display: flex; gap: 8px; align-items: center; }
+    select, button, textarea { font: inherit; }
+    select, .secondary { background: #17233a; border: 1px solid #364660; color: #f3f6fe; border-radius: 10px; padding: 10px 12px; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .6; }
+    .panel { border: 1px solid #28364d; border-radius: 16px; background: #111d30; overflow: hidden; }
+    .notice { padding: 13px 20px; color: #9daecc; background: #172338; border-bottom: 1px solid #28364d; font-size: 13px; }
+    .conversation { height: min(62vh, 600px); min-height: 360px; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+    .empty { color: #a1b2cc; text-align: center; margin: auto; max-width: 500px; line-height: 1.65; }
+    .empty strong { display: block; font-size: 20px; color: #f0f4ff; margin-bottom: 8px; }
+    .bubble { max-width: 88%; border-radius: 16px; padding: 13px 16px; line-height: 1.7; overflow-wrap: break-word; font-size: 15px; }
+    .user { background: #4245b3; align-self: flex-end; }
+    .user .message-content { white-space: pre-wrap; }
+    .assistant { background: transparent; align-self: flex-start; width: 100%; max-width: 100%; padding: 12px 6px; }
+    .message-content { display: block; min-width: 0; }
+    .assistant .message-content > :first-child { margin-top: 0; }
+    .assistant .message-content > :last-child { margin-bottom: 0; }
+    .assistant p { margin: 0 0 13px; }
+    .assistant h1, .assistant h2, .assistant h3, .assistant h4 { color: #f5f7ff; line-height: 1.35; letter-spacing: -0.3px; margin: 23px 0 10px; }
+    .assistant h1 { font-size: 22px; }
+    .assistant h2 { font-size: 19px; }
+    .assistant h3 { font-size: 17px; }
+    .assistant h4 { font-size: 15px; }
+    .assistant strong { color: #fff; font-weight: 700; }
+    .assistant ul, .assistant ol { margin: 8px 0 16px; padding-left: 26px; }
+    .assistant li { padding-left: 3px; margin: 6px 0; }
+    .assistant li > p { margin: 0; }
+    .assistant li > p + p { margin-top: 8px; }
+    .assistant a { color: #a9c9ff; text-decoration: underline; text-underline-offset: 3px; }
+    .assistant a:hover { color: #d8e8ff; }
+    .assistant blockquote { border-left: 3px solid #747afa; padding: 3px 14px; margin: 12px 0; background: #1a2840; border-radius: 0 9px 9px 0; }
+    .assistant hr { border: 0; border-top: 1px solid #34445f; margin: 22px 0; }
+    .assistant :not(pre) > code { background: #25344f; border: 1px solid #3a4d6c; border-radius: 5px; padding: 2px 5px; font: 0.9em ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .code-wrap { border: 1px solid #34445f; border-radius: 12px; overflow: hidden; margin: 14px 0 18px; background: #0c1525; }
+    .code-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; background: #18263c; font-size: 12px; color: #b9c7da; }
+    .copy-code { color: #e9eef8; background: #273750; border: 1px solid #40516b; border-radius: 6px; font-size: 12px; padding: 4px 9px; }
+    .code-wrap pre { margin: 0; padding: 16px; overflow-x: auto; line-height: 1.55; font: 13px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre; }
+    .code-wrap code { font: inherit; }
+    .table-scroll { width: 100%; overflow-x: auto; border: 1px solid #354761; border-radius: 10px; margin: 14px 0 20px; }
+    .assistant table { border-collapse: collapse; font-size: 13px; min-width: 420px; width: 100%; }
+    .assistant th, .assistant td { padding: 11px 13px; text-align: left; vertical-align: top; border-bottom: 1px solid #354761; }
+    .assistant th { background: #253650; color: #fff; font-weight: 650; white-space: nowrap; }
+    .assistant tr:last-child td { border-bottom: 0; }
+    .assistant tr:nth-child(even) td { background: #17263c; }
+    .assistant tr:nth-child(odd) td { background: #1b2a41; }
+    .assistant th:not(:last-child), .assistant td:not(:last-child) { border-right: 1px solid #354761; }
+    .assistant .message-content { max-width: 100%; }
+    .role { display: block; opacity: .7; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; letter-spacing: .7px; }
+    .composer { display: flex; gap: 12px; padding: 15px; border-top: 1px solid #28364d; align-items: flex-end; }
+    textarea { flex: 1; background: #15233a; border: 1px solid #354662; border-radius: 10px; color: #fff; resize: vertical; padding: 13px; min-height: 52px; max-height: 180px; }
+    textarea:focus, select:focus { outline: 2px solid #7075ed; outline-offset: 1px; }
+    .primary { background: #6566ef; color: #fff; border: 0; border-radius: 10px; padding: 15px 22px; font-weight: 700; }
+    .footer { font-size: 12px; margin-top: 13px; color: #899ab8; }
+    @media (max-width: 620px) { .shell { margin: 14px auto; padding: 0 10px; } .conversation { height: 60vh; padding: 14px; } .user { max-width: 95%; } .assistant { max-width: 100%; } .primary { padding: 15px; } .assistant table { min-width: 480px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">✦</div>
+        <div><h1>TopicChat AI</h1><p class="sub">One agent · Choose a topic · Ask anything</p></div>
+      </div>
+      <div class="controls">
+        <label for="topic">Topic</label>
+        <select id="topic" aria-label="Choose a topic"></select>
+        <button type="button" class="secondary" id="newChat">New chat</button>
+      </div>
+    </header>
+    <section class="panel">
+      <div class="notice" id="notice">Choose a topic. Your conversations are separated by topic.</div>
+      <div id="messages" class="conversation" role="log" aria-live="polite"></div>
+      <form id="chatForm" class="composer">
+        <textarea id="message" placeholder="Ask a question… (Enter to send, Shift+Enter for newline)" maxlength="4000" required></textarea>
+        <button id="send" class="primary" type="submit">Send</button>
+      </form>
+    </section>
+    <p class="footer">Chats live in server memory, not a database. Restarting the backend clears remembered context. Answers may be incorrect or outdated.</p>
+  </main>
+  <script>
+    const select = document.getElementById('topic');
+    const messages = document.getElementById('messages');
+    const input = document.getElementById('message');
+    const form = document.getElementById('chatForm');
+    const send = document.getElementById('send');
+    const notice = document.getElementById('notice');
+    const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16);
+    }));
+    let busy = false;
+    let chat = {};
+    let topic = 'General';
+    try { chat = JSON.parse(sessionStorage.getItem('topicchat-state') || '{}') || {}; } catch (_) { chat = {}; }
+    const state = t => (chat[t] ||= { id: uuid(), entries: [] });
+    const save = () => sessionStorage.setItem('topicchat-state', JSON.stringify(chat));
+    function enhanceFormattedAnswer(content) {
+      content.querySelectorAll('table').forEach(table => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'table-scroll';
+        table.parentNode.insertBefore(wrapper, table);
+        wrapper.append(table);
+      });
+      content.querySelectorAll('pre').forEach(pre => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'code-wrap';
+        const bar = document.createElement('div');
+        bar.className = 'code-toolbar';
+        const language = document.createElement('span');
+        const code = pre.querySelector('code');
+        language.textContent = code?.className?.replace(/^language-/, '') || 'Code';
+        const copy = document.createElement('button');
+        copy.type = 'button'; copy.className = 'copy-code'; copy.textContent = 'Copy code';
+        copy.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(code?.textContent || pre.textContent || '');
+            copy.textContent = 'Copied!';
+            setTimeout(() => { copy.textContent = 'Copy code'; }, 1600);
+          } catch (_) { copy.textContent = 'Copy failed'; }
+        });
+        bar.append(language, copy);
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.append(bar, pre);
+      });
+    }
+    function render() {
+      messages.replaceChildren();
+      const history = state(topic).entries;
+      notice.textContent = `Selected topic: ${topic}. One AI agent handles every topic.`;
+      if (!history.length) {
+        const empty = document.createElement('div'); empty.className = 'empty';
+        const strong = document.createElement('strong'); strong.textContent = `Let's talk about ${topic}`;
+        empty.append(strong, document.createTextNode('Ask your first question. Follow-up messages in this topic remember the conversation while the server is running.'));
+        messages.append(empty);
+      }
+      for (const item of history) {
+        const bubble = document.createElement('div');
+        bubble.className = `bubble ${item.role === 'user' ? 'user' : 'assistant'}`;
+        const label = document.createElement('span'); label.className = 'role';
+        label.textContent = item.role === 'user' ? 'You' : 'TopicChat';
+        const content = document.createElement('div');
+        content.className = 'message-content';
+        if (item.role === 'assistant' && typeof item.html === 'string') {
+          // HTML is rendered by the server with raw HTML escaped and unsafe URLs disabled.
+          content.innerHTML = item.html;
+          enhanceFormattedAnswer(content);
+        } else {
+          content.textContent = item.text;
+        }
+        bubble.append(label, content); messages.append(bubble);
+      }
+      messages.scrollTop = messages.scrollHeight;
+    }
+    function updateBusy(value) {
+      busy = value; select.disabled = value; input.disabled = value;
+      send.disabled = value; document.getElementById('newChat').disabled = value;
+      send.textContent = value ? 'Thinking…' : 'Send';
+    }
+    async function init() {
+      try {
+        const response = await fetch('/topics'); if (!response.ok) throw Error('Topic API unavailable');
+        const data = await response.json();
+        for (const t of data.topics) {
+          const option = document.createElement('option'); option.value = t; option.textContent = t; select.append(option);
+        }
+        const stored = sessionStorage.getItem('topicchat-active-topic');
+        topic = data.topics.includes(stored) ? stored : 'General';
+        select.value = topic; render();
+      } catch (err) { notice.textContent = `Could not load topics: ${err.message}`; }
+    }
+    select.addEventListener('change', () => {
+      topic = select.value; sessionStorage.setItem('topicchat-active-topic', topic); render();
+    });
+    document.getElementById('newChat').addEventListener('click', () => {
+      chat[topic] = { id: uuid(), entries: [] }; save(); render(); input.focus();
+    });
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); }
+    });
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const text = input.value.trim(); if (!text || busy) return;
+      const current = state(topic);
+      current.entries.push({ role: 'user', text }); input.value = ''; save(); render(); updateBusy(true);
+      try {
+        const response = await fetch('/chat', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: current.id, topic, message: text })
+        });
+        const data = await response.json();
+        if (!response.ok) throw Error(typeof data.detail === 'string' ? data.detail : 'Chat request failed');
+        current.entries.push({ role: 'assistant', text: data.answer, html: data.answer_html });
+      } catch (err) {
+        current.entries.push({ role: 'assistant', text: `Error: ${err.message}` });
+      } finally {
+        save(); updateBusy(false); render(); input.focus();
+      }
+    });
+    init();
+  </script>
+</body>
+</html>
